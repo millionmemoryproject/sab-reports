@@ -109,6 +109,34 @@ class ReportingProductGroupController extends Controller
             ->with('status', 'Rule added.');
     }
 
+    public function updateRule(Request $request, ReportingProductGroup $productGroup, ReportingProductGroupRule $rule)
+    {
+        if ($rule->reporting_product_group_id !== $productGroup->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'match_field' => ['required', 'in:name,sku,product_id,variation_id'],
+            'match_operator' => ['required', 'in:contains,equals,starts_with,ends_with'],
+            'match_value' => ['required', 'string', 'max:255'],
+            'level_name' => ['nullable', 'string', 'max:255'],
+            'priority' => ['nullable', 'integer'],
+        ]);
+
+        $rule->update([
+            'match_field' => $validated['match_field'],
+            'match_operator' => $validated['match_operator'],
+            'match_value' => $validated['match_value'],
+            'level_name' => $validated['level_name'] ?? null,
+            'priority' => $validated['priority'] ?? 0,
+            'active' => $request->boolean('active'),
+        ]);
+
+        return redirect()
+            ->route('reports.product-groups.show', $productGroup)
+            ->with('status', 'Rule updated.');
+    }
+
     public function destroyRule(ReportingProductGroup $productGroup, ReportingProductGroupRule $rule)
     {
         if ($rule->reporting_product_group_id !== $productGroup->id) {
@@ -187,10 +215,44 @@ class ReportingProductGroupController extends Controller
         ->sortByDesc('revenue')
         ->values();
 
+    $rawProducts = $items
+        ->groupBy(fn ($item) => $item->name . '||' . $item->sku)
+        ->map(function ($group) use ($productGroup) {
+            $first = $group->first();
+
+            return (object) [
+                'name' => $first->name,
+                'sku' => $first->sku,
+                'level' => $this->levelForItem($first, $productGroup),
+                'quantity' => $group->sum('quantity'),
+                'revenue' => $group->sum('total'),
+            ];
+        })
+        ->sortByDesc('revenue')
+        ->values();
+
+    $customers = $items
+        ->filter(fn ($item) => $item->order && $item->order->billing_email)
+        ->groupBy(fn ($item) => $item->order->billing_email)
+        ->map(function ($group) {
+            $order = $group->first()->order;
+
+            return (object) [
+                'name' => trim($order->billing_first_name . ' ' . $order->billing_last_name),
+                'email' => $order->billing_email,
+                'orders' => $group->pluck('order.id')->unique()->count(),
+                'quantity' => $group->sum('quantity'),
+                'revenue' => $group->sum('total'),
+            ];
+        })
+        ->sortByDesc('revenue')
+        ->values();
+
     $totals = [
         'orders' => $orders->count(),
         'quantity' => $items->sum('quantity'),
         'revenue' => $items->sum('total'),
+        'customers' => $customers->count(),
         'stripe_fees' => $orders->sum(fn ($order) => optional($order->stripeTransaction)->fee ?? 0),
         'stripe_net' => $orders->sum(fn ($order) => optional($order->stripeTransaction)->net ?? 0),
     ];
@@ -200,8 +262,53 @@ class ReportingProductGroupController extends Controller
         'items',
         'orders',
         'levels',
+        'rawProducts',
+        'customers',
         'totals'
     ));
+}
+
+public function exportOrders(ReportingProductGroup $productGroup)
+{
+    $orders = $this->matchedItemsForGroup($productGroup)
+        ->with(['order.stripeTransaction'])
+        ->get()
+        ->pluck('order')
+        ->filter()
+        ->unique('id')
+        ->sortByDesc('date_created')
+        ->values();
+
+    $slug = \Illuminate\Support\Str::slug($productGroup->name) ?: 'product-group';
+    $filename = $slug . '-orders-' . now()->format('Y-m-d') . '.csv';
+
+    return response()->streamDownload(function () use ($orders) {
+        $out = fopen('php://output', 'w');
+
+        fputcsv($out, [
+            'Order', 'Date', 'Customer', 'Email', 'City', 'State',
+            'Order Total', 'Stripe Fee', 'Stripe Net', 'Match',
+        ]);
+
+        foreach ($orders as $order) {
+            fputcsv($out, [
+                $order->order_number,
+                optional($order->date_created)->format('Y-m-d'),
+                trim($order->billing_first_name . ' ' . $order->billing_last_name),
+                $order->billing_email,
+                $order->billing_city,
+                $order->billing_state,
+                $order->total,
+                optional($order->stripeTransaction)->fee,
+                optional($order->stripeTransaction)->net,
+                $order->match_status,
+            ]);
+        }
+
+        fclose($out);
+    }, $filename, [
+        'Content-Type' => 'text/csv',
+    ]);
 }
 
 private function levelForItem(WooCommerceOrderItem $item, ReportingProductGroup $group): ?string

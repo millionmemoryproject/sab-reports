@@ -9,7 +9,7 @@
 
 @section('content')
     <section class="hero">
-        <div class="hero-label">Sound Archive Books Reporting</div>
+        <div class="hero-label">Million Memory Project Reporting</div>
         <h1>Sales Map</h1>
         <p>Order geography based on WooCommerce billing state data.</p>
     </section>

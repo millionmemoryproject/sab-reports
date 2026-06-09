@@ -8,7 +8,7 @@
     </section>
 
     <section class="kpis">
-        <div class="card kpi">
+        <div class="card kpi is-positive">
             <span>Revenue</span>
             <strong>${{ number_format($totals['revenue'], 2) }}</strong>
             <small>WooCommerce item revenue</small>
@@ -27,6 +27,12 @@
         </div>
 
         <div class="card kpi">
+            <span>Customers</span>
+            <strong>{{ number_format($totals['customers']) }}</strong>
+            <small>Unique buyers of this group</small>
+        </div>
+
+        <div class="card kpi is-positive">
             <span>Stripe Net</span>
             <strong>${{ number_format($totals['stripe_net'], 2) }}</strong>
             <small>From matched orders</small>
@@ -35,7 +41,7 @@
 
     <section class="grid-two">
         <div class="card">
-            <h2 class="section-title">Level Breakdown</h2>
+            <h2 class="card-title">Level Breakdown</h2>
 
             <div class="leaderboard">
                 @forelse($levels as $level)
@@ -56,7 +62,7 @@
         </div>
 
         <div class="card">
-            <h2 class="section-title">Stripe Summary</h2>
+            <h2 class="card-title">Stripe Summary</h2>
 
             <div class="leaderboard">
                 <div class="leader-row">
@@ -79,7 +85,74 @@
     </section>
 
     <section class="card table-card">
-        <h2 class="section-title">Orders in This Group</h2>
+        <h2 class="card-title">Raw Products</h2>
+        <p class="muted">Individual WooCommerce products grouped into this reporting group.</p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Level</th>
+                <th class="money">Qty</th>
+                <th class="money">Revenue</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($rawProducts as $product)
+                <tr>
+                    <td>{{ $product->name }}</td>
+                    <td>{{ $product->sku ?: '—' }}</td>
+                    <td>{{ $product->level ?: '—' }}</td>
+                    <td class="money">{{ number_format($product->quantity) }}</td>
+                    <td class="money">${{ number_format($product->revenue, 2) }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5">No products found.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card table-card">
+        <h2 class="card-title">Customers</h2>
+        <p class="muted">Customers who purchased products in this group, by revenue.</p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Email</th>
+                <th class="money">Orders</th>
+                <th class="money">Qty</th>
+                <th class="money">Revenue</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($customers as $customer)
+                <tr>
+                    <td>{{ $customer->name ?: '—' }}</td>
+                    <td>{{ $customer->email }}</td>
+                    <td class="money">{{ number_format($customer->orders) }}</td>
+                    <td class="money">{{ number_format($customer->quantity) }}</td>
+                    <td class="money">${{ number_format($customer->revenue, 2) }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5">No customers found.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card table-card">
+        <div class="card-header">
+            <h2 class="card-title">Orders in This Group</h2>
+            <a href="{{ route('reports.product-groups.report.export', $productGroup) }}" class="button small">Export CSV</a>
+        </div>
 
         <table>
             <thead>

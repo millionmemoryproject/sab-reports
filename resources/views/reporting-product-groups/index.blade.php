@@ -49,8 +49,8 @@
                         <td>{{ $group->active ? 'Active' : 'Inactive' }}</td>
                         <td>
                             <a class="button" href="{{ route('reports.product-groups.show', $group) }}">Manage</a>
+                            <a class="button" href="{{ route('reports.product-groups.report', $group) }}">Report</a>
                         </td>
-                        
                     </tr>
                 @empty
                     <tr>

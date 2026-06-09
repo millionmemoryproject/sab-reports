@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>{{ $title ?? 'SAB Reporting' }}</title>
+    <title>{{ $title ?? 'Million Memory Project Reporting' }}</title>
 
     <link rel="stylesheet" href="{{ asset('css/reports/reporting.css') }}">
 
@@ -24,6 +24,7 @@
 
 </div>
 
+<script src="{{ asset('js/reports/nav-menu.js') }}"></script>
 @stack('scripts')
 </body>
 </html>

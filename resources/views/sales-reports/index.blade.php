@@ -6,25 +6,25 @@
 
 @section('content')
     <section class="hero">
-        <div class="hero-label">Sound Archive Books Reporting</div>
+        <div class="hero-label">Million Memory Project Reporting</div>
         <h1>Sales & Revenue Intelligence</h1>
         <p>Combined WooCommerce order data and Stripe payment data, reconciled into one reporting view.</p>
     </section>
 
     <section class="kpis">
-        <div class="card kpi">
+        <div class="card kpi is-positive">
             <span>Gross Revenue</span>
             <strong>${{ number_format($totals['woo_total'], 2) }}</strong>
             <small>WooCommerce order total</small>
         </div>
 
-        <div class="card kpi">
+        <div class="card kpi is-positive">
             <span>Net Revenue</span>
             <strong>${{ number_format($totals['stripe_net'], 2) }}</strong>
             <small>After Stripe fees</small>
         </div>
 
-        <div class="card kpi">
+        <div class="card kpi is-negative">
             <span>Stripe Fees</span>
             <strong>${{ number_format($totals['stripe_fees'], 2) }}</strong>
             <small>{{ number_format($totals['match_rate'], 1) }}% reconciliation rate</small>
@@ -42,19 +42,19 @@
             <small>Unique billing emails</small>
         </div>
 
-        <div class="card kpi">
+        <div class="card kpi is-positive">
             <span>Matched</span>
             <strong>{{ number_format($totals['matched']) }}</strong>
             <small>Linked to Stripe transactions</small>
         </div>
 
-        <div class="card kpi">
+        <div class="card kpi is-warn">
             <span>Unmatched</span>
             <strong>{{ number_format($totals['unmatched']) }}</strong>
             <small>Needs review if material</small>
         </div>
 
-        <div class="card kpi">
+        <div class="card kpi is-negative">
             <span>Fees as %</span>
             <strong>
                 {{ $totals['woo_total'] > 0 ? number_format(($totals['stripe_fees'] / $totals['woo_total']) * 100, 2) : '0.00' }}%
@@ -98,16 +98,17 @@
 
     <section class="grid-main">
         <div class="card">
-            <h2 class="section-title">Revenue by Month</h2>
+            <h2 class="card-title">Revenue by Month</h2>
             <canvas id="revenueChart" height="115"></canvas>
         </div>
 
         <div class="card">
-            <h2 class="section-title">Top States</h2>
+            <h2 class="card-title">Top States</h2>
 
             <div class="leaderboard">
                 @forelse($states as $state)
                     <div class="leader-row">
+                        <span class="leader-rank">{{ $loop->iteration }}</span>
                         <div>
                             <div class="leader-name">{{ $state['state'] }}</div>
                             <div class="leader-meta">{{ number_format($state['orders']) }} orders</div>
@@ -123,11 +124,12 @@
 
     <section class="grid-two">
         <div class="card">
-            <h2 class="section-title">Top Products</h2>
+            <h2 class="card-title">Top Products</h2>
 
             <div class="leaderboard">
                 @forelse($products as $product)
                     <div class="leader-row">
+                        <span class="leader-rank">{{ $loop->iteration }}</span>
                         <div>
                             <div class="leader-name">
                                 @if(!empty($product->group_id))
@@ -157,7 +159,7 @@
         </div>
 
         <div class="card">
-            <h2 class="section-title">Reconciliation Summary</h2>
+            <h2 class="card-title">Reconciliation Summary</h2>
 
             <div class="leaderboard">
                 <div class="leader-row">
@@ -188,7 +190,7 @@
     </section>
 
     <section class="card table-card">
-        <h2 class="section-title">Recent Orders</h2>
+        <h2 class="card-title">Recent Orders</h2>
 
         <table>
             <thead>
@@ -300,11 +302,19 @@
                     {
                         label: 'Gross Revenue',
                         data: revenue,
+                        borderColor: '#3F5461',
+                        backgroundColor: 'rgba(63, 84, 97, 0.12)',
+                        pointBackgroundColor: '#3F5461',
+                        fill: true,
                         tension: 0.35
                     },
                     {
                         label: 'Net Revenue',
                         data: net,
+                        borderColor: '#15803d',
+                        backgroundColor: 'rgba(21, 128, 61, 0.10)',
+                        pointBackgroundColor: '#15803d',
+                        fill: true,
                         tension: 0.35
                     }
                 ]

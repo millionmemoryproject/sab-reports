@@ -9,7 +9,7 @@
 
     <section class="grid">
         <div class="card">
-            <h2 style="margin-top:0;">Edit Group</h2>
+            <h2 class="card-title">Edit Group</h2>
 
             <form method="POST" action="{{ route('reports.product-groups.update', $productGroup) }}">
                 @csrf
@@ -29,15 +29,17 @@
                 <button type="submit" class="button">Save Group</button>
             </form>
 
-            <form method="POST" action="{{ route('reports.product-groups.destroy', $productGroup) }}" onsubmit="return confirm('Delete this product group?');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="button danger">Delete Group</button>
-            </form>
+            <div class="danger-zone">
+                <form method="POST" action="{{ route('reports.product-groups.destroy', $productGroup) }}" onsubmit="return confirm('Delete this product group?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="button outline-danger">Delete Group</button>
+                </form>
+            </div>
         </div>
 
         <div class="card">
-            <h2 style="margin-top:0;">Add Matching Rule</h2>
+            <h2 class="card-title">Add Matching Rule</h2>
 
             <form method="POST" action="{{ route('reports.product-groups.rules.store', $productGroup) }}">
                 @csrf
@@ -73,7 +75,22 @@
     </section>
 
     <section class="card table-card">
-        <h2 style="margin-top:0;">Rules</h2>
+        <h2 class="card-title">Rules</h2>
+        <p class="muted">Click Edit to change a rule. Inactive rules are ignored when matching.</p>
+
+        @php
+            $fieldLabels = ['name' => 'Product Name', 'sku' => 'SKU', 'product_id' => 'Product ID', 'variation_id' => 'Variation ID'];
+            $operatorLabels = ['contains' => 'Contains', 'equals' => 'Equals', 'starts_with' => 'Starts With', 'ends_with' => 'Ends With'];
+        @endphp
+
+        {{-- One edit form per rule; cells reference it via the form="" attribute. --}}
+        @foreach($productGroup->rules as $rule)
+            <form id="rule-edit-{{ $rule->id }}" method="POST"
+                  action="{{ route('reports.product-groups.rules.update', [$productGroup, $rule]) }}">
+                @csrf
+                @method('PUT')
+            </form>
+        @endforeach
 
         <table>
             <thead>
@@ -83,28 +100,68 @@
                 <th>Value</th>
                 <th>Level</th>
                 <th>Priority</th>
+                <th>Active</th>
                 <th></th>
             </tr>
             </thead>
             <tbody>
             @forelse($productGroup->rules as $rule)
-                <tr>
-                    <td>{{ $rule->match_field }}</td>
-                    <td>{{ $rule->match_operator }}</td>
-                    <td>{{ $rule->match_value }}</td>
-                    <td>{{ $rule->level_name ?: '—' }}</td>
-                    <td>{{ $rule->priority }}</td>
+                @php($f = 'rule-edit-'.$rule->id)
+                <tr class="rule-row">
                     <td>
-                        <form class="inline-form" method="POST" action="{{ route('reports.product-groups.rules.destroy', [$productGroup, $rule]) }}" onsubmit="return confirm('Delete this rule?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="button danger">Delete</button>
-                        </form>
+                        <span class="cell-view">{{ $fieldLabels[$rule->match_field] ?? $rule->match_field }}</span>
+                        <select class="cell-edit" name="match_field" form="{{ $f }}">
+                            <option value="name" @selected($rule->match_field === 'name')>Product Name</option>
+                            <option value="sku" @selected($rule->match_field === 'sku')>SKU</option>
+                            <option value="product_id" @selected($rule->match_field === 'product_id')>Product ID</option>
+                            <option value="variation_id" @selected($rule->match_field === 'variation_id')>Variation ID</option>
+                        </select>
+                    </td>
+                    <td>
+                        <span class="cell-view">{{ $operatorLabels[$rule->match_operator] ?? $rule->match_operator }}</span>
+                        <select class="cell-edit" name="match_operator" form="{{ $f }}">
+                            <option value="contains" @selected($rule->match_operator === 'contains')>Contains</option>
+                            <option value="equals" @selected($rule->match_operator === 'equals')>Equals</option>
+                            <option value="starts_with" @selected($rule->match_operator === 'starts_with')>Starts With</option>
+                            <option value="ends_with" @selected($rule->match_operator === 'ends_with')>Ends With</option>
+                        </select>
+                    </td>
+                    <td>
+                        <span class="cell-view">{{ $rule->match_value }}</span>
+                        <input class="cell-edit" type="text" name="match_value" value="{{ $rule->match_value }}" form="{{ $f }}" required>
+                    </td>
+                    <td>
+                        <span class="cell-view">{{ $rule->level_name ?: '—' }}</span>
+                        <input class="cell-edit" type="text" name="level_name" value="{{ $rule->level_name }}" form="{{ $f }}">
+                    </td>
+                    <td>
+                        <span class="cell-view">{{ $rule->priority }}</span>
+                        <input class="cell-edit" type="number" name="priority" value="{{ $rule->priority }}" form="{{ $f }}">
+                    </td>
+                    <td>
+                        <span class="cell-view">
+                            <span class="badge {{ $rule->active ? 'matched' : '' }}">{{ $rule->active ? 'Active' : 'Inactive' }}</span>
+                        </span>
+                        <input class="cell-edit" type="checkbox" name="active" value="1" form="{{ $f }}" @checked($rule->active)>
+                    </td>
+                    <td>
+                        <div class="rule-view-actions">
+                            <button type="button" class="button small ghost" data-rule-edit>Edit</button>
+                            <form class="inline-form" method="POST" action="{{ route('reports.product-groups.rules.destroy', [$productGroup, $rule]) }}" onsubmit="return confirm('Delete this rule?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="button small outline-danger">Delete</button>
+                            </form>
+                        </div>
+                        <div class="rule-edit-actions">
+                            <button type="submit" class="button small" form="{{ $f }}">Save</button>
+                            <button type="button" class="button small outline" data-rule-cancel="{{ $f }}">Cancel</button>
+                        </div>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6">No rules yet.</td>
+                    <td colspan="7">No rules yet.</td>
                 </tr>
             @endforelse
             </tbody>
@@ -112,7 +169,7 @@
     </section>
 
     <section class="card table-card">
-        <h2 style="margin-top:0;">Matching Preview</h2>
+        <h2 class="card-title">Matching Preview</h2>
         <p class="muted">These WooCommerce order items currently match this group’s active rules.</p>
 
         <table>
@@ -144,4 +201,8 @@
             </tbody>
         </table>
     </section>
+
+    @push('scripts')
+        <script src="{{ asset('js/reports/rule-edit.js') }}"></script>
+    @endpush
 @endsection
